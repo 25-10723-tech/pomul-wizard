@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>포물선 마법사</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050714;
+      --panel: rgba(13, 18, 42, 0.94);
+      --line: #62d2ff;
+      --accent: #ffd166;
+      --danger: #ff5f7e;
+      --good: #76f7aa;
+      --text: #f8fbff;
+      --muted: #aeb9df;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Press Start 2P", system-ui, sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    #gameCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background: var(--bg);
+      cursor: crosshair;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .panel {
+      width: min(760px, 100%);
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 28px;
+      border: 3px solid rgba(98, 210, 255, 0.9);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(16, 23, 55, 0.96), rgba(7, 11, 28, 0.96));
+      box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.38), 0 0 32px rgba(98, 210, 255, 0.22);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 28px;
+      color: var(--accent);
+      font-size: clamp(28px, 6vw, 64px);
+      line-height: 1.35;
+      text-shadow: 4px 4px 0 #3e2c89, 0 0 18px rgba(255, 209, 102, 0.45);
+    }
+
+    h2 {
+      margin: 0 0 22px;
+      color: var(--accent);
+      font-size: clamp(18px, 3.6vw, 32px);
+      line-height: 1.4;
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .btn {
+      min-width: min(320px, 100%);
+      min-height: 54px;
+      padding: 14px 18px;
+      border: 3px solid #fff;
+      border-radius: 6px;
+      background: #1f8fff;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #0b4d8f;
+      transition: transform 120ms ease, filter 120ms ease, opacity 120ms ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      filter: brightness(1.12);
+      transform: translateY(-2px);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #0b4d8f;
+    }
+
+    .btn.alt {
+      background: #663dff;
+      box-shadow: 0 5px 0 #2c1a83;
+    }
+
+    .btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .field {
+      width: min(440px, 100%);
+      display: grid;
+      gap: 10px;
+      text-align: left;
+    }
+
+    label {
+      color: var(--accent);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    input {
+      width: 100%;
+      min-height: 52px;
+      padding: 13px;
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 6px;
+      background: #090e23;
+      color: #fff;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.18);
+    }
+
+    .hint {
+      min-height: 20px;
+      color: var(--danger);
+      font-size: 9px;
+      line-height: 1.6;
+    }
+
+    .cards {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 8px 0;
+    }
+
+    .card {
+      min-height: 132px;
+      display: grid;
+      place-items: center;
+      gap: 8px;
+      padding: 12px 8px;
+      border: 3px solid rgba(255, 255, 255, 0.36);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.18), 0 0 22px rgba(255, 209, 102, 0.22);
+    }
+
+    .avatar {
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+      font-size: 42px;
+      line-height: 1;
+    }
+
+    .card-name {
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .character-tools {
+      display: grid;
+      gap: 12px;
+    }
+
+    .emoji-picker-btn {
+      width: 100%;
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .emoji-preview {
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .color-swatches {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+    }
+
+    .color-swatch {
+      aspect-ratio: 1;
+      border: 3px solid rgba(255, 255, 255, 0.45);
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.32);
+    }
+
+    .color-swatch.selected {
+      border-color: #fff;
+      box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.35), inset 0 0 0 2px rgba(0, 0, 0, 0.32);
+    }
+
+    .emoji-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.72);
+    }
+
+    .emoji-modal.open {
+      display: flex;
+    }
+
+    .emoji-modal-box {
+      width: min(720px, 100%);
+      max-height: calc(100vh - 40px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
+      padding: 18px;
+      border: 3px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(14, 20, 50, 0.99), rgba(5, 9, 24, 0.99));
+    }
+
+    .emoji-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    .emoji-close {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+      gap: 8px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .emoji-choice {
+      height: 42px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .emoji-choice:hover {
+      border-color: var(--accent);
+      background: rgba(255, 209, 102, 0.12);
+    }
+
+    .hud {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      z-index: 4;
+      display: none;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .hud.active {
+      display: flex;
+    }
+
+    .hud-box {
+      padding: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.58);
+      border-radius: 6px;
+      background: rgba(5, 8, 20, 0.72);
+      font-size: 10px;
+      line-height: 1.8;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .score {
+      color: var(--good);
+      font-size: clamp(24px, 5vw, 48px);
+      line-height: 1.45;
+    }
+
+    .ranking {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      margin: 0 0 18px;
+      text-align: left;
+    }
+
+    .rank-row {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.24);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .rank-score {
+      color: var(--accent);
+    }
+
+    @media (max-width: 680px) {
+      .panel {
+        padding: 20px;
+      }
+
+      .cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hud {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+      }
+
+      .hud-box {
+        padding: 8px;
+        font-size: 8px;
+      }
+
+      .rank-row {
+        grid-template-columns: 32px 1fr auto;
+        font-size: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" aria-label="포물선 마법사 게임 화면"></canvas>
+
+  <div id="hud" class="hud">
+    <div class="hud-box">
+      <div id="playerInfo">PLAYER</div>
+      <div>점수 <span id="scoreText">0</span></div>
+      <div>라운드 <span id="roundText">1</span>/<span id="maxRoundText">3</span></div>
+    </div>
+    <div class="hud-box">
+      <div>각도 <span id="angleText">45</span>도</div>
+      <div>속도 고정</div>
+      <div>클릭 / SPACE</div>
+    </div>
+  </div>
+
+  <section id="startScreen" class="screen active">
+    <div class="panel">
+      <h1>포물선<br>마법사</h1>
+      <div class="stack">
+        <button class="btn" id="goSelectBtn">게임 시작</button>
+        <button class="btn alt" id="goRankingBtn">랭킹 보기</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="selectScreen" class="screen">
+    <div class="panel">
+      <h2>준비</h2>
+      <div class="stack">
+        <div class="field">
+          <label for="nickname">닉네임</label>
+          <input id="nickname" maxlength="8" autocomplete="off" placeholder="최대 8자">
+          <div id="nameHint" class="hint">한글, 영문, 숫자만 사용할 수 있습니다.</div>
+        </div>
+        <div class="field" id="characterCards"></div>
+        <button class="btn" id="startGameBtn" disabled>시작!</button>
+        <button class="btn alt" id="selectBackBtn">뒤로</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultScreen" class="screen">
+    <div class="panel">
+      <h2>결과</h2>
+      <div id="finalScore" class="score">0</div>
+      <p id="resultMessage"></p>
+      <div class="stack">
+        <button class="btn" id="againBtn">다시 도전</button>
+        <button class="btn alt" id="resultRankBtn">랭킹 보기</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="rankingScreen" class="screen">
+    <div class="panel">
+      <h2>랭킹</h2>
+      <div id="rankingList" class="ranking"></div>
+      <div class="stack">
+        <button class="btn" id="rankPlayBtn">게임 시작</button>
+        <button class="btn alt" id="rankHomeBtn">처음으로</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const screens = {
+      start: document.getElementById("startScreen"),
+      select: document.getElementById("selectScreen"),
+      result: document.getElementById("resultScreen"),
+      ranking: document.getElementById("rankingScreen")
+    };
+    const hud = document.getElementById("hud");
+    const nicknameInput = document.getElementById("nickname");
+    const nameHint = document.getElementById("nameHint");
+    const startGameBtn = document.getElementById("startGameBtn");
+    const characterCards = document.getElementById("characterCards");
+    const scoreText = document.getElementById("scoreText");
+    const roundText = document.getElementById("roundText");
+    const maxRoundText = document.getElementById("maxRoundText");
+    const angleText = document.getElementById("angleText");
+    const playerInfo = document.getElementById("playerInfo");
+    const finalScore = document.getElementById("finalScore");
+    const resultMessage = document.getElementById("resultMessage");
+    const rankingList = document.getElementById("rankingList");
+
+    const DT = 1 / 60;
+    const GRAVITY = 9.8;
+    const SCALE = 42;
+    const SHOT_SPEED = 15;
+    const MIN_ANGLE = 5;
+    const MAX_ANGLE = 85;
+    const ANGLE_SPEED = 58;
+    const MAX_ROUNDS = 3;
+    const STORAGE_KEY = "parabolaWizardRanking";
+    const SUPABASE_URL = "https://iqtssgobzxipqetlyygn.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XwgLl5z84BBfhv60o0Bqlg_Stzk4t4c";
+    const RANKINGS_TABLE = "rankings";
+    const rankingDb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
+
+    const characters = [
+      { id: "wizard", emoji: "🧙", name: "마법사", color: "#7c5cff" },
+      { id: "pirate", emoji: "☠️", name: "해적", color: "#ff9f43" },
+      { id: "robot", emoji: "🤖", name: "로봇", color: "#5fd4ff" },
+      { id: "fox", emoji: "🦊", name: "여우", color: "#ff6b6b" }
+    ];
+    const EMOJI_OPTIONS = "😀 😃 😄 😁 😆 😅 😂 🙂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😋 😛 😜 🤪 🤨 🧐 🤓 😎 🥳 😏 😒 😞 😟 🥺 😢 😭 😤 😠 🤬 🤯 😳 🥵 🥶 😱 😨 😰 🤗 🤔 🫡 🤭 🤫 😶 😐 😑 🙄 😴 😵 🥴 😷 🤒 🤑 🤠 😈 👿 👻 💀 ☠️ 👽 🤖 🎃 😺 😸 😹 😻 😼 🙀 👋 🤚 🖐️ ✋ 🖖 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 🙏 💪 🦾 🧠 👀 👑 🎩 🧢 🪖 💍 💎 🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🐤 🦆 🦅 🦉 🦇 🐺 🐴 🦄 🐝 🦋 🐌 🐞 🐜 🕷️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦀 🐠 🐟 🐬 🐳 🦈 🐊 🐅 🐆 🦓 🦍 🦧 🐘 🦛 🦏 🐪 🦒 🦘 🦬 🐂 🐎 🐖 🐏 🦙 🐐 🦌 🐕 🐈 🐓 🦃 🦚 🦜 🦢 🦩 🕊️ 🐇 🦝 🦨 🦡 🦦 🦥 🐁 🐿️ 🦔 🐉 🐲 🌵 🎄 🌲 🌳 🌴 🌱 🌿 ☘️ 🍀 🍃 🍂 🍁 🍄 🌷 🌹 🌺 🌸 🌼 🌻 🌞 🌝 🌙 🌎 🪐 💫 ⭐ 🌟 ✨ ⚡ ☄️ 🔥 🌈 ☀️ ❄️ 🌊 🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🥑 🥦 🥬 🥒 🌶️ 🌽 🥕 🧄 🧅 🥔 🍠 🥐 🥯 🍞 🧀 🍖 🍗 🥩 🍔 🍟 🍕 🌭 🥪 🌮 🌯 🥚 🍳 🍲 🥗 🍿 🍱 🍙 🍚 🍛 🍜 🍝 🍣 🍤 🥟 🍦 🍧 🍩 🍪 🎂 🍰 🧁 🍫 🍬 🍭 ☕ 🍵 🧃 🥤 🚗 🚕 🚙 🚌 🏎️ 🚓 🚑 🚒 🚚 🚜 🛵 🏍️ 🚲 🛴 🛹 🚂 🚇 🚀 🛸 🚁 ✈️ ⛵ 🚢 ⚓ 🗿 🗽 🗼 🏰 🏯 🎡 🎢 🎠 🏖️ 🏝️ 🌋 🗻 🏕️ ⛺ 🏠 🏢 🏫 🏥 🏦 🏨 🏭 ⛩️ ⛪ 🕌 🛕 🎆 🎇 🧨 🎈 🎉 🎊 🎁 🎀 🏆 🥇 🥈 🥉 ⚽ 🏀 🏈 ⚾ 🎾 🏐 🥏 🎱 🏓 🏸 🥊 🥋 🏹 🎣 🎮 🕹️ 🎲 ♟️ 🎯 🎳 🎤 🎧 🎷 🎸 🎹 🎺 🎻 🥁 📱 💻 ⌨️ 🖥️ 🖨️ 💾 📷 📹 🎥 📞 📺 📻 ⏰ ⌚ 🧭 💡 🔦 🧯 💰 💳 📦 📚 📖 📝 ✏️ 🖊️ 📌 📎 🔒 🔑 🔨 🪓 ⛏️ 🛠️ 🗡️ ⚔️ 🛡️ 🧪 🔭 🔬 🩹 🩺 💊 🧲 🪄 🔮 🧿 🪩 🧸 ♠️ ♥️ ♦️ ♣️ 🀄 🎴 🧑‍🚀 🧑‍🎨 🧑‍🚒 🧑‍🔬 🧑‍💻 🧑‍🍳 🧑‍🏫 🧑‍⚕️ 🧑‍🌾 🧑‍✈️ 🧑‍🎤 🧑‍🔧 🧙 🧚 🧛 🧜 🧝 🧞 🧟 🥷 🦸 🦹 👮 👷 💂 🕵️".trim().split(/\s+/);
+    const CANNON_COLORS = ["#7c5cff", "#ff9f43", "#5fd4ff", "#ff6b6b", "#76f7aa", "#ffd166", "#f368e0", "#48dbfb", "#1f8fff", "#c0392b", "#2ecc71", "#f1c40f", "#e67e22", "#ecf0f1", "#95a5a6", "#111827"];
+
+    const state = {
+      screen: "start",
+      width: 0,
+      height: 0,
+      dpr: 1,
+      stars: [],
+      playerName: "",
+      character: null,
+      cannonColor: CANNON_COLORS[0],
+      score: 0,
+      round: 1,
+      angleDeg: 45,
+      angleDir: 1,
+      hasShot: false,
+      waitingNextRound: 0,
+      projectile: null,
+      stoppedProjectile: null,
+      target: null,
+      particles: []
+    };
+
+    const targetImage = new Image();
+    targetImage.src = "target.png";
+
+    function resize() {
+      state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      state.width = window.innerWidth;
+      state.height = window.innerHeight;
+      canvas.width = Math.floor(state.width * state.dpr);
+      canvas.height = Math.floor(state.height * state.dpr);
+      canvas.style.width = state.width + "px";
+      canvas.style.height = state.height + "px";
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      createStars();
+      if (!state.target) placeTarget();
+    }
+
+    function createStars() {
+      const count = Math.max(80, Math.floor((state.width * state.height) / 9000));
+      state.stars = Array.from({ length: count }, () => ({
+        x: Math.random() * state.width,
+        y: Math.random() * state.height * 0.78,
+        size: Math.random() * 2 + 0.7,
+        phase: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.035 + 0.012
+      }));
+    }
+
+    function showScreen(name) {
+      state.screen = name;
+      Object.values(screens).forEach(screen => screen.classList.remove("active"));
+      if (screens[name]) screens[name].classList.add("active");
+      hud.classList.toggle("active", name === "game");
+      if (name === "ranking") renderRanking();
+    }
+
+    function validateName() {
+      const name = nicknameInput.value.trim();
+      const valid = /^[가-힣a-zA-Z0-9]{1,8}$/.test(name);
+      if (!name) {
+        nameHint.textContent = "닉네임을 입력하세요.";
+      } else if (!valid) {
+        nameHint.textContent = "공백과 특수문자는 사용할 수 없습니다.";
+      } else {
+        nameHint.textContent = "";
+      }
+      startGameBtn.disabled = !(valid && state.character);
+      return valid;
+    }
+
+    function renderCharacterCards() {
+      if (!state.character) state.character = makeCharacter("🧙");
+      characterCards.innerHTML = `<label>캐릭터</label><div class="character-tools"><button class="emoji-picker-btn" id="emojiPickerBtn" type="button"><span class="emoji-preview" id="emojiPreview">${state.character.emoji}</span><span>이모지 선택</span></button><label>대포 색깔</label><div class="color-swatches" id="colorSwatches">${CANNON_COLORS.map(color => `<button class="color-swatch${color === state.cannonColor ? " selected" : ""}" type="button" data-color="${color}" style="background:${color}" aria-label="${color}"></button>`).join("")}</div></div>`;
+      document.getElementById("emojiPickerBtn").addEventListener("click", openEmojiPicker);
+      document.querySelectorAll(".color-swatch").forEach(btn => btn.addEventListener("click", () => {
+        state.cannonColor = btn.dataset.color;
+        if (state.character) state.character = makeCharacter(state.character.emoji);
+        document.querySelectorAll(".color-swatch").forEach(item => item.classList.toggle("selected", item.dataset.color === state.cannonColor));
+        validateName();
+      }));
+      validateName();
+    }
+
+    function getFirstEmoji(value) {
+      const text = value.trim();
+      if (!text) return "";
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const first = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)][0];
+        return first ? first.segment : "";
+      }
+      return Array.from(text)[0] || "";
+    }
+
+    function isEmoji(value) {
+      return /[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Regional_Indicator}]/u.test(value);
+    }
+
+    function makeCharacter(emoji) {
+      return {
+        id: "custom",
+        emoji,
+        name: "custom",
+        color: state.cannonColor || CANNON_COLORS[0]
+      };
+    }
+
+    let emojiPickerModal = null;
+
+    function openEmojiPicker() {
+      if (!emojiPickerModal) {
+        emojiPickerModal = document.createElement("div");
+        emojiPickerModal.className = "emoji-modal";
+        emojiPickerModal.innerHTML = `<div class="emoji-modal-box"><div class="emoji-modal-head"><span>이모지 선택</span><button class="emoji-close" id="emojiPickerClose" type="button">×</button></div><div class="emoji-grid">${EMOJI_OPTIONS.map(emoji => `<button class="emoji-choice" type="button" data-emoji="${emoji}">${emoji}</button>`).join("")}</div></div>`;
+        document.body.appendChild(emojiPickerModal);
+        document.getElementById("emojiPickerClose").addEventListener("click", closeEmojiPicker);
+        emojiPickerModal.addEventListener("click", event => {
+          if (event.target === emojiPickerModal) closeEmojiPicker();
+        });
+        emojiPickerModal.querySelectorAll(".emoji-choice").forEach(btn => btn.addEventListener("click", () => {
+          state.character = makeCharacter(btn.dataset.emoji);
+          document.getElementById("emojiPreview").textContent = state.character.emoji;
+          validateName();
+          closeEmojiPicker();
+        }));
+      }
+      emojiPickerModal.classList.add("open");
+    }
+
+    function closeEmojiPicker() {
+      if (emojiPickerModal) emojiPickerModal.classList.remove("open");
+    }
+
+    function startGame() {
+      state.playerName = nicknameInput.value.trim();
+      state.score = 0;
+      state.round = 1;
+      state.angleDeg = 45;
+      state.angleDir = 1;
+      state.hasShot = false;
+      state.waitingNextRound = 0;
+      state.projectile = null;
+      state.stoppedProjectile = null;
+      state.particles = [];
+      playerInfo.textContent = `${state.character.emoji} ${state.playerName}`;
+      maxRoundText.textContent = MAX_ROUNDS;
+      placeTarget();
+      updateHud();
+      showScreen("game");
+    }
+
+    function beginRound() {
+      state.angleDeg = 45;
+      state.angleDir = Math.random() < 0.5 ? -1 : 1;
+      state.hasShot = false;
+      state.waitingNextRound = 0;
+      state.projectile = null;
+      state.stoppedProjectile = null;
+      placeTarget();
+      updateHud();
+    }
+
+    function placeTarget() {
+      const point = getReachableTargetPoint();
+      state.target = {
+        x: point.x,
+        y: point.y,
+        r: 28
+      };
+    }
+
+    function getReachableTargetPoint() {
+      const ground = getGroundY();
+      const base = getCannonBase();
+      const minX = Math.max(base.x + 170, Math.min(state.width * 0.38, 360));
+      const maxX = Math.max(minX + 30, Math.min(state.width - 70, base.x + 560));
+      let fallback = null;
+
+      for (let i = 0; i < 220; i++) {
+        const angleDeg = 22 + Math.random() * 46;
+        const rad = angleDeg * Math.PI / 180;
+        const muzzle = getMuzzleAtAngle(angleDeg);
+        const verticalSpeed = SHOT_SPEED * Math.sin(rad);
+        const maxT = (verticalSpeed + Math.sqrt(verticalSpeed * verticalSpeed + 2 * GRAVITY * (ground - 42 - muzzle.y) / SCALE)) / GRAVITY;
+        const t = maxT * (0.22 + Math.random() * 0.5);
+        const point = getTrajectoryPoint(angleDeg, t);
+        const visible = point.x >= minX && point.x <= maxX && point.y >= 95 && point.y <= ground - 48;
+
+        if (visible) return point;
+        if (!fallback && point.x > base.x + 150 && point.x < state.width - 60 && point.y > 80 && point.y < ground - 48) {
+          fallback = point;
+        }
+      }
+
+      const fallbackT = Math.max(0.7, Math.min(1.15, (state.width - base.x - 180) / (SHOT_SPEED * Math.cos(Math.PI / 4) * SCALE)));
+      return fallback || getTrajectoryPoint(45, fallbackT);
+    }
+
+    function getTrajectoryPoint(angleDeg, t) {
+      const rad = angleDeg * Math.PI / 180;
+      const muzzle = getMuzzleAtAngle(angleDeg);
+      return {
+        x: muzzle.x + SHOT_SPEED * Math.cos(rad) * t * SCALE,
+        y: muzzle.y + (-SHOT_SPEED * Math.sin(rad) * t + 0.5 * GRAVITY * t * t) * SCALE
+      };
+    }
+
+    function getGroundY() {
+      return Math.max(320, state.height - 82);
+    }
+
+    function getCannonBase() {
+      return {
+        x: Math.max(76, Math.min(126, state.width * 0.14)),
+        y: getGroundY() - 28
+      };
+    }
+
+    function getMuzzle() {
+      return getMuzzleAtAngle(state.angleDeg);
+    }
+
+    function getMuzzleAtAngle(angleDeg) {
+      const base = getCannonBase();
+      const angle = angleDeg * Math.PI / 180;
+      return {
+        x: base.x + Math.cos(angle) * 58,
+        y: base.y - Math.sin(angle) * 58
+      };
+    }
+
+    function updateHud() {
+      scoreText.textContent = state.score;
+      roundText.textContent = state.round;
+      angleText.textContent = Math.round(state.angleDeg);
+    }
+
+    function shoot() {
+      if (state.screen !== "game" || state.hasShot || state.projectile) return;
+      const angle = state.angleDeg * Math.PI / 180;
+      const muzzle = getMuzzle();
+      state.hasShot = true;
+      state.projectile = {
+        x: muzzle.x,
+        y: muzzle.y,
+        vx: SHOT_SPEED * Math.cos(angle),
+        vy: -SHOT_SPEED * Math.sin(angle),
+        r: 8,
+        trail: [{ x: muzzle.x, y: muzzle.y }],
+        hit: false
+      };
+    }
+
+    function updateGame() {
+      if (state.screen !== "game") return;
+
+      if (!state.hasShot) {
+        state.angleDeg += state.angleDir * ANGLE_SPEED * DT;
+        if (state.angleDeg >= MAX_ANGLE) {
+          state.angleDeg = MAX_ANGLE;
+          state.angleDir = -1;
+        } else if (state.angleDeg <= MIN_ANGLE) {
+          state.angleDeg = MIN_ANGLE;
+          state.angleDir = 1;
+        }
+      }
+
+      if (state.projectile) {
+        const p = state.projectile;
+        p.vy += GRAVITY * DT;
+        p.x += p.vx * DT * SCALE;
+        p.y += p.vy * DT * SCALE;
+        p.trail.push({ x: p.x, y: p.y });
+
+        const groundHit = p.y + p.r >= getGroundY();
+        const hit = distance(p.x, p.y, state.target.x, state.target.y) <= p.r + state.target.r;
+
+        if (hit) {
+          p.hit = true;
+          state.score += 100;
+          burst(state.target.x, state.target.y, state.character.color, 28);
+          stopProjectile(Math.min(p.x, state.width), p.y);
+        } else if (groundHit) {
+          stopProjectile(p.x, getGroundY() - p.r);
+        } else if (p.x > state.width + 120 || p.x < -120 || p.y > state.height + 120) {
+          stopProjectile(p.x, Math.min(p.y, getGroundY() - p.r));
+        }
+      }
+
+      if (state.hasShot && !state.projectile) {
+        state.waitingNextRound++;
+        if (state.waitingNextRound > 70) {
+          if (state.round >= MAX_ROUNDS) {
+            finishGame();
+          } else {
+            state.round++;
+            beginRound();
+          }
+        }
+      }
+
+      state.particles = state.particles.filter(dot => {
+        dot.x += dot.vx;
+        dot.y += dot.vy;
+        dot.vy += 0.08;
+        dot.life -= 1;
+        return dot.life > 0;
+      });
+
+      updateHud();
+    }
+
+    function stopProjectile(x, y) {
+      state.stoppedProjectile = {
+        ...state.projectile,
+        x,
+        y
+      };
+      state.projectile = null;
+    }
+
+    function burst(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * 4 + 1;
+        state.particles.push({
+          x,
+          y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: Math.random() * 28 + 22,
+          color
+        });
+      }
+    }
+
+    async function finishGame() {
+      await saveRanking();
+      finalScore.textContent = `${state.score}점`;
+      resultMessage.textContent = state.score >= 400 ? "정확한 포물선입니다." : state.score >= 200 ? "좋은 감각입니다." : "발사 순간을 다시 노려보세요.";
+      showScreen("result");
+    }
+
+    async function saveRanking() {
+      const row = {
+        name: state.playerName,
+        character: state.character.emoji,
+        score: state.score,
+        cannon_color: state.cannonColor,
+        created_at: new Date().toISOString()
+      };
+      if (rankingDb) {
+        const { error } = await rankingDb.from(RANKINGS_TABLE).insert(row);
+        if (!error) return;
+        console.warn("Supabase ranking insert failed; using local fallback.", error);
+      }
+      saveLocalRanking(row);
+    }
+
+    function saveLocalRanking(row) {
+      const rows = getLocalRanking();
+      rows.push(row);
+      rows.sort((a, b) => b.score - a.score);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(rows.slice(0, 5)));
+    }
+
+    async function getRanking() {
+      if (rankingDb) {
+        const { data, error } = await rankingDb.from(RANKINGS_TABLE).select("name,character,score,cannon_color,created_at").order("score", { ascending: false }).order("created_at", { ascending: true }).limit(5);
+        if (!error) return data || [];
+        console.warn("Supabase ranking select failed; using local fallback.", error);
+      }
+      return getLocalRanking();
+    }
+
+    function getLocalRanking() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    async function renderRanking() {
+      const rows = await getRanking();
+      if (!rows.length) {
+        rankingList.innerHTML = `<p>아직 기록이 없습니다.</p>`;
+        return;
+      }
+      rankingList.innerHTML = rows.slice(0, 5).map((row, index) => `
+        <div class="rank-row">
+          <span>#${index + 1}</span>
+          <span>${row.character} ${escapeHtml(row.name)}</span>
+          <span class="rank-score">${row.score}점</span>
+        </div>
+      `).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function distance(ax, ay, bx, by) {
+      return Math.hypot(ax - bx, ay - by);
+    }
+
+    function drawBackground(time) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, state.height);
+      gradient.addColorStop(0, "#050615");
+      gradient.addColorStop(0.58, "#101947");
+      gradient.addColorStop(1, "#07101f");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, state.width, state.height);
+
+      ctx.fillStyle = "rgba(255, 240, 190, 0.95)";
+      state.stars.forEach(star => {
+        const twinkle = 0.45 + Math.sin(time * star.speed + star.phase) * 0.35;
+        ctx.globalAlpha = Math.max(0.18, twinkle);
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+      });
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = "#0b1530";
+      ctx.beginPath();
+      ctx.arc(state.width * 0.78, 92, 34, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f5eebf";
+      ctx.beginPath();
+      ctx.arc(state.width * 0.76, 86, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      const ground = getGroundY();
+      ctx.fillStyle = "#0f2a38";
+      ctx.fillRect(0, ground, state.width, state.height - ground);
+      ctx.fillStyle = "#183f44";
+      for (let x = -30; x < state.width + 30; x += 58) {
+        ctx.beginPath();
+        ctx.moveTo(x, ground);
+        ctx.lineTo(x + 28, ground - 28);
+        ctx.lineTo(x + 58, ground);
+        ctx.fill();
+      }
+    }
+
+    function drawGame() {
+      drawTarget();
+      drawCannon();
+      drawProjectile(state.stoppedProjectile, 0.45);
+      drawProjectile(state.projectile, 1);
+      drawParticles();
+
+      const ground = getGroundY();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
+      ctx.font = "10px 'Press Start 2P'";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(state.hasShot ? "탄환이 멈추면 다음 라운드" : "클릭 또는 SPACE로 발사", state.width / 2, ground + 44);
+    }
+
+    function drawCannon() {
+      const base = getCannonBase();
+      const angle = state.angleDeg * Math.PI / 180;
+      const muzzle = getMuzzle();
+      const character = state.character || characters[0];
+
+      ctx.save();
+      ctx.translate(base.x, base.y);
+      ctx.rotate(-angle);
+      ctx.fillStyle = "#2c3348";
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.fillRect(0, -13, 62, 26);
+      ctx.strokeRect(0, -13, 62, 26);
+      ctx.restore();
+
+      ctx.fillStyle = character.color;
+      ctx.beginPath();
+      ctx.arc(base.x, base.y + 8, 32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.font = "27px 'Segoe UI Emoji', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(character.emoji, base.x, base.y + 8);
+
+      ctx.fillStyle = "#ffd166";
+      ctx.beginPath();
+      ctx.arc(muzzle.x, muzzle.y, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255, 209, 102, 0.34)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(base.x, base.y);
+      for (let i = 1; i <= 28; i++) {
+        const t = i / 28;
+        const previewVx = SHOT_SPEED * Math.cos(angle);
+        const previewVy = -SHOT_SPEED * Math.sin(angle) + GRAVITY * (t * 1.6);
+        const x = muzzle.x + previewVx * (t * 1.6) * SCALE;
+        const y = muzzle.y + previewVy * (t * 1.6) * SCALE * 0.5;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    function drawTarget() {
+      if (!state.target) return;
+      const { x, y, r } = state.target;
+      if (targetImage.complete && targetImage.naturalWidth > 0) {
+        ctx.drawImage(targetImage, x - r, y - r, r * 2, r * 2);
+        return;
+      }
+      ctx.fillStyle = "#ff4e6f";
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff4e6f";
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawProjectile(projectile, alpha) {
+      if (!projectile) return;
+      ctx.save();
+      projectile.trail.forEach((point, index) => {
+        ctx.globalAlpha = alpha * (0.18 + index / projectile.trail.length * 0.58);
+        ctx.fillStyle = state.character ? state.character.color : "#ffd166";
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = projectile.hit ? "#76f7aa" : "#fff4a6";
+      ctx.beginPath();
+      ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      state.particles.forEach(dot => {
+        ctx.globalAlpha = Math.max(0, dot.life / 50);
+        ctx.fillStyle = dot.color;
+        ctx.fillRect(dot.x, dot.y, 5, 5);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function loop(time) {
+      drawBackground(time);
+      updateGame();
+      if (state.screen === "game") drawGame();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById("goSelectBtn").addEventListener("click", () => showScreen("select"));
+    document.getElementById("goRankingBtn").addEventListener("click", () => showScreen("ranking"));
+    document.getElementById("selectBackBtn").addEventListener("click", () => showScreen("start"));
+    document.getElementById("startGameBtn").addEventListener("click", () => {
+      if (validateName()) startGame();
+    });
+    document.getElementById("againBtn").addEventListener("click", () => startGame());
+    document.getElementById("resultRankBtn").addEventListener("click", () => showScreen("ranking"));
+    document.getElementById("rankPlayBtn").addEventListener("click", () => showScreen("select"));
+    document.getElementById("rankHomeBtn").addEventListener("click", () => showScreen("start"));
+
+    nicknameInput.addEventListener("input", () => {
+      nicknameInput.value = nicknameInput.value.replace(/\s/g, "").slice(0, 8);
+      validateName();
+    });
+
+    canvas.addEventListener("pointerdown", () => shoot());
+
+    window.addEventListener("keydown", event => {
+      if (event.key === " ") {
+        event.preventDefault();
+        shoot();
+      }
+    });
+
+    window.addEventListener("resize", resize);
+
+    renderCharacterCards();
+    resize();
+    validateName();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
